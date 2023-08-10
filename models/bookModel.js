@@ -23,6 +23,14 @@ const bookSchema = new mongoose.Schema({
   ISBN: {
     type: Number,
     required: [true, "A book must have an Isbn number"],
+    // min: [13, "ISBN number must not be less than 13"],
+    // max: [15, "ISBN number must not be more than 15"],
+    validate: {
+      validator: function (val) {
+        return val.toString().length === 13;
+      },
+      message: "ISBN number must be 13 in length",
+    },
   },
   dateAdded: {
     type: Date,
