@@ -10,7 +10,11 @@ const handleDuplicateFieldsDB = (err) => {
   //const value = err.keyValue.match(/(["'])(\\?.)*?\1/)[0];
   //console.log(value);
 
-  const message = `Duplicate field value: ${err.keyValue.title}. Please use another value!`;
+  const message = `Duplicate ${Object.keys(err.keyValue).map(
+    (el) => el
+  )} value: ${
+    err.keyValue.title || err.keyValue.email
+  }. Please use another value!`;
   return new AppError(message, 400);
 };
 const handleValidationErrorDB = (err) => {
