@@ -2,7 +2,7 @@ const User = require("../models/userModel");
 const catchAsync = require("../utils/catchAsync");
 const jwt = require("jsonwebtoken");
 const AppError = require("../utils/appError");
-const validator = require("validator");
+const { validationResult } = require("express-validator");
 
 const signToken = (id) =>
   jwt.sign(
@@ -14,23 +14,16 @@ const signToken = (id) =>
       expiresIn: process.env.JWT_EXPIRES_IN,
     }
   );
+
 exports.signup = catchAsync(async (req, res, next) => {
-  if (!req.body.passwordConfirm) {
-    return next(new AppError("Please, confirm password", 400));
-  }
-  if (!validator.isLength(req.body.passwordConfirm, { min: 8 })) {
-    return next(
-      new AppError("Password confirm must not be less than 8 in length ")
-    );
-  }
-  if (req.body.password !== req.body.passwordConfirm) {
-    return next(new AppError("Passwords do not match", 400));
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
   const newUser = await User.create({
     name: req.body.name,
     email: req.body.email,
     password: req.body.password,
-    passwordConfirm: req.body.passwordConfirm,
   });
   res.status(201).json({
     status: "success",
@@ -41,11 +34,11 @@ exports.signup = catchAsync(async (req, res, next) => {
 });
 
 exports.login = catchAsync(async (req, res, next) => {
-  const { email, password } = req.body;
-  // 1. check if email and password is not empty
-  if (!email || !password) {
-    return next(new AppError("Please provide email and password", 400));
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
+  const { email, password } = req.body;
   // 2. check if email and password is correct
   const user = await User.findOne({ email }).select("+password");
 
