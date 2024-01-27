@@ -20,6 +20,20 @@ exports.signup = catchAsync(async (req, res, next) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
+
+  const { email } = req.body;
+
+  const existingUser = await User.findOne({ email });
+
+  if (existingUser) {
+    return next(
+      new AppError(
+        "The email adddress is already in use. Please provide a different one",
+        409
+      )
+    );
+  }
+
   const newUser = await User.create({
     name: req.body.name,
     email: req.body.email,
