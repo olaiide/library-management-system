@@ -1,6 +1,6 @@
 const express = require("express");
 const userController = require("../controllers/userController");
-const { validPassword } = require("../utils/validPassword");
+const { constants } = require("../utils/constants");
 const router = express.Router();
 const { body } = require("express-validator");
 
@@ -22,7 +22,7 @@ router.post(
       .withMessage("Password must be at least 8 characters long"),
     body("password")
       .if(body("password").isLength({ min: 8 }))
-      .matches(validPassword)
+      .matches(constants.VALID_PASSWORD)
       .withMessage(
         "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character"
       ),
@@ -46,7 +46,7 @@ router.post(
       .withMessage("Password must be at least 8 characters long"),
     body("password")
       .if(body("password").isLength({ min: 8 }))
-      .matches(validPassword)
+      .matches(constants.VALID_PASSWORD)
       .withMessage(
         "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character"
       ),

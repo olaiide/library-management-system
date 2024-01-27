@@ -3,6 +3,7 @@ const catchAsync = require("../utils/catchAsync");
 const jwt = require("jsonwebtoken");
 const AppError = require("../utils/appError");
 const { validationResult } = require("express-validator");
+const { constants } = require("../utils/constants");
 
 const signToken = (id) =>
   jwt.sign(
@@ -40,7 +41,7 @@ exports.signup = catchAsync(async (req, res, next) => {
     password: req.body.password,
   });
   res.status(201).json({
-    status: "success",
+    status: constants.SUCCESS_TEXT,
     data: {
       user: newUser,
     },
@@ -62,7 +63,7 @@ exports.login = catchAsync(async (req, res, next) => {
   // 3. if eveyrthing is ok, send token to client
   const token = signToken(user._id);
   res.status(200).json({
-    status: "success",
+    status: constants.SUCCESS_TEXT,
     token,
   });
 });
@@ -70,7 +71,7 @@ exports.login = catchAsync(async (req, res, next) => {
 exports.getAllUsers = catchAsync(async (req, res, next) => {
   const users = await User.find();
   res.status(200).json({
-    status: "success",
+    status: constants.SUCCESS_TEXT,
     results: users.length,
     data: {
       users,
