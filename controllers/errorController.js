@@ -19,16 +19,7 @@ const handleValidationErrorDB = (err) => {
   return new AppError(message, 400);
 };
 
-const sendErrorDev = (err, res) => {
-  res.status(err.statusCode).json({
-    status: err.status,
-    error: err,
-    message: err.message,
-    stack: err.stack,
-  });
-};
-
-const sendErrorProd = (err, res) => {
+const sendError = (err, res) => {
   // Operational, trusted error: send message to client
   if (err.isOperational) {
     res.status(err.statusCode).json({
@@ -38,13 +29,11 @@ const sendErrorProd = (err, res) => {
 
     // Programming or other unknown error: don't leak error details
   } else {
-    // 1) Log error
-    console.error("ERROR 💥", err);
-
-    // 2) Send generic message
+    // 2) Send error
     res.status(500).json({
       status: "error",
       message: "Something went very wrong!",
+      err: err,
     });
   }
 };
@@ -53,13 +42,9 @@ module.exports = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || "error";
 
-  if (process.env.NODE_ENV === "development") {
-    sendErrorDev(err, res);
-  } else if (process.env.NODE_ENV === "production") {
-    if (err.name === "CastError") err = handleCastErrorDB(err);
-    if (err.code === 11000) err = handleDuplicateFieldsDB(err);
-    if (err.name === "ValidationError") err = handleValidationErrorDB(err);
+  if (err.name === "CastError") err = handleCastErrorDB(err);
+  if (err.code === 11000) err = handleDuplicateFieldsDB(err);
+  if (err.name === "ValidationError") err = handleValidationErrorDB(err);
 
-    sendErrorProd(err, res);
-  }
+  sendError(err, res);
 };
