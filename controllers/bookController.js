@@ -17,15 +17,34 @@ exports.addBook = catchAsync(async (req, res, next) => {
   });
 });
 exports.getAllBooks = catchAsync(async (req, res, next) => {
+  const queryObj = { ...req.query };
+  const excludedFields = ["page", "sort", "limit"];
+
+  // Exclude fields that are not for filtering
+  excludedFields.forEach((el) => delete queryObj[el]);
+
+  // Advanced filtering
+  let queryStr = JSON.stringify(queryObj);
+  queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
+
+  // Initialize the query with filtering
+  let query = Book.find(JSON.parse(queryStr));
+
+  // Pagination
   const page = req.query.page * 1 || 1;
   const limit = req.query.limit * 1 || 10;
   const skip = (page - 1) * limit;
-  const books = await Book.find().skip(skip).limit(limit);
-  const totalItems = await Book.countDocuments();
+  query = query.skip(skip).limit(limit);
+
+  // Execute the query
+  const books = await query;
+  const totalItems = await Book.countDocuments(JSON.parse(queryStr));
+
   if (req.query.page) {
     if (skip >= totalItems)
       return next(new AppError("This page does not exist", 404));
   }
+
   res.status(200).json({
     status: "Success",
     results: books.length,
@@ -37,6 +56,7 @@ exports.getAllBooks = catchAsync(async (req, res, next) => {
     },
   });
 });
+
 exports.getBook = catchAsync(async (req, res, next) => {
   const book = await Book.findById(req.params.id);
   if (!book) {
