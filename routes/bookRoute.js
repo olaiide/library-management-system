@@ -35,24 +35,22 @@ router.get("/:id", bookController.getBook);
 router.patch(
   "/:id",
   [
-    body("title").notEmpty().withMessage("A book must have a title"),
     body("title")
+      .optional()
       .if(body("title").notEmpty())
       .isLength({ min: 5 })
       .withMessage("A book title must have more than 5 characters"),
   ],
-  [body("genre").notEmpty().withMessage("A book must have a genre")],
-  [body("author").notEmpty().withMessage("A book must have an author")],
   [
-    body("ISBN").notEmpty().withMessage("Please provide ISBN number"),
     body("ISBN")
+      .optional()
       .if(body("ISBN").notEmpty())
       .isLength({ min: 13, max: 13 })
       .withMessage("ISBN number must be 13 in length"),
   ],
   [
-    body("overview").notEmpty().withMessage("A book must have an overview"),
     body("overview")
+      .optional()
       .if(body("title").notEmpty())
       .isLength({ min: 15 })
       .withMessage("A book must not have an overview less than 15 characters"),
