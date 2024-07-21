@@ -23,7 +23,6 @@ exports.signup = catchAsync(async (req, res, next) => {
   }
 
   const { email } = req.body;
-
   const existingUser = await User.findOne({ email });
 
   if (existingUser) {
