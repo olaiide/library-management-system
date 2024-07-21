@@ -17,11 +17,10 @@ exports.addBook = catchAsync(async (req, res, next) => {
   });
 });
 exports.getAllBooks = catchAsync(async (req, res, next) => {
-  const queryObj = { ...req.query };
-  const excludedFields = ["page", "sort", "limit"];
+  const queryObj = {};
 
-  // Exclude fields that are not for filtering
-  excludedFields.forEach((el) => delete queryObj[el]);
+  if (req.query.ISBN) queryObj.ISBN = req.query.ISBN;
+  if (req.query.genre) queryObj.genre = req.query.genre;
 
   // Advanced filtering
   let queryStr = JSON.stringify(queryObj);
