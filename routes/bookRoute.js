@@ -58,5 +58,7 @@ router.patch(
   bookController.updateBook
 );
 router.delete("/:id", bookController.deleteBook);
+router.patch("/borrow/:id", bookController.borrowBook);
+router.patch("/return/:id", bookController.returnBook);
 
 module.exports = router;
