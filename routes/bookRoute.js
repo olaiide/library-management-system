@@ -1,5 +1,6 @@
 const express = require("express");
 const bookController = require("../controllers/bookController");
+const userController = require("../controllers/userController");
 const { body } = require("express-validator");
 const router = express.Router();
 
@@ -58,7 +59,7 @@ router.patch(
   bookController.updateBook
 );
 router.delete("/:id", bookController.deleteBook);
-router.patch("/borrow/:id", bookController.borrowBook);
-router.patch("/return/:id", bookController.returnBook);
+router.patch("/borrow/:id", userController.protect, bookController.borrowBook);
+router.patch("/return/:id", userController.protect, bookController.returnBook);
 
 module.exports = router;
