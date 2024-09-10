@@ -16,18 +16,12 @@ const userSchema = new mongoose.Schema({
   photo: {
     type: String,
   },
-  role: {
-    type: String,
-    enum: ["user", "admin"],
-    default: "user",
-  },
   password: {
     type: String,
     required: [true, "Please provide a password"],
     minLength: 8,
     select: false,
   },
-  passwordChangedAt: Date,
 });
 
 userSchema.pre("save", async function (next) {

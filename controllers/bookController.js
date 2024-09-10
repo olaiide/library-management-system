@@ -2,7 +2,6 @@ const Book = require("../models/bookModel");
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
 const { validationResult } = require("express-validator");
-const { constants } = require("../utils/constants");
 
 exports.addBook = catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
@@ -11,7 +10,7 @@ exports.addBook = catchAsync(async (req, res, next) => {
   }
   const newBook = await Book.create(req.body);
   res.status(201).json({
-    status: constants.SUCCESS,
+    status: "Success",
     data: {
       book: newBook,
     },
@@ -79,7 +78,7 @@ exports.updateBook = catchAsync(async (req, res, next) => {
     runValidators: true,
   });
   res.status(200).json({
-    status: constants.SUCCESS,
+    status: "Success",
     data: {
       book,
     },
@@ -93,49 +92,5 @@ exports.deleteBook = catchAsync(async (req, res, next) => {
   res.status(204).json({
     status: "success",
     data: null,
-  });
-});
-exports.borrowBook = catchAsync(async (req, res, next) => {
-  const id = req.params.id;
-  const book = await Book.findById(id);
-  if (!book) {
-    return next(new AppError("No book found with that ID", 404));
-  }
-  if (!book.available) {
-    return next(new AppError("Book already borrowed", 400));
-  }
-  book.available = false;
-
-  await book.save();
-
-  const responseBook = book.toObject();
-  delete responseBook.available;
-
-  res.status(200).json({
-    status: constants.SUCCESS,
-    message: "Book borrowed successfully",
-    data: {
-      book: responseBook,
-    },
-  });
-});
-exports.returnBook = catchAsync(async (req, res, next) => {
-  const id = req.params.id;
-  const book = await Book.findById(id);
-  if (!book) {
-    return next(new AppError("No book found with that ID", 404));
-  }
-  if (book.available) {
-    return next(new AppError("Book has not been borrowed", 400));
-  }
-  book.available = true;
-  await book.save();
-
-  res.status(200).json({
-    status: constants.SUCCESS,
-    message: "Book returned successfully",
-    data: {
-      book,
-    },
   });
 });
