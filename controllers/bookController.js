@@ -11,7 +11,7 @@ exports.addBook = catchAsync(async (req, res, next) => {
   }
   const newBook = await Book.create(req.body);
   res.status(201).json({
-    status: constants.SUCCESS_TEXT,
+    status: constants.SUCCESS,
     data: {
       book: newBook,
     },
@@ -79,7 +79,7 @@ exports.updateBook = catchAsync(async (req, res, next) => {
     runValidators: true,
   });
   res.status(200).json({
-    status: constants.SUCCESS_TEXT,
+    status: constants.SUCCESS,
     data: {
       book,
     },
@@ -101,7 +101,7 @@ exports.borrowBook = catchAsync(async (req, res, next) => {
   if (!book) {
     return next(new AppError("No book found with that ID", 404));
   }
-  if (book.available === false) {
+  if (!book.available) {
     return next(new AppError("Book already borrowed", 400));
   }
   book.available = false;
@@ -112,7 +112,7 @@ exports.borrowBook = catchAsync(async (req, res, next) => {
   delete responseBook.available;
 
   res.status(200).json({
-    status: constants.SUCCESS_TEXT,
+    status: constants.SUCCESS,
     message: "Book borrowed successfully",
     data: {
       book: responseBook,
@@ -125,14 +125,14 @@ exports.returnBook = catchAsync(async (req, res, next) => {
   if (!book) {
     return next(new AppError("No book found with that ID", 404));
   }
-  if (book.available === true) {
+  if (book.available) {
     return next(new AppError("Book has not been borrowed", 400));
   }
   book.available = true;
   await book.save();
 
   res.status(200).json({
-    status: constants.SUCCESS_TEXT,
+    status: constants.SUCCESS,
     message: "Book returned successfully",
     data: {
       book,

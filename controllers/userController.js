@@ -30,7 +30,7 @@ exports.signup = catchAsync(async (req, res, next) => {
     return next(
       new AppError(
         "The email adddress is already in use. Please provide a different one",
-        409
+        400
       )
     );
   }
@@ -39,9 +39,10 @@ exports.signup = catchAsync(async (req, res, next) => {
     name: req.body.name,
     email: req.body.email,
     password: req.body.password,
+    role: req.body.role,
   });
   res.status(201).json({
-    status: constants.SUCCESS_TEXT,
+    status: constants.SUCCESS,
     data: {
       user: newUser,
     },
@@ -63,7 +64,7 @@ exports.login = catchAsync(async (req, res, next) => {
   // 3. if eveyrthing is ok, send token to client
   const token = signToken(user._id);
   res.status(200).json({
-    status: constants.SUCCESS_TEXT,
+    status: constants.SUCCESS,
     token,
   });
 });
@@ -71,7 +72,7 @@ exports.login = catchAsync(async (req, res, next) => {
 exports.getAllUsers = catchAsync(async (req, res, next) => {
   const users = await User.find();
   res.status(200).json({
-    status: constants.SUCCESS_TEXT,
+    status: constants.SUCCESS,
     results: users.length,
     data: {
       users,
@@ -101,13 +102,18 @@ exports.protect = catchAsync(async (req, res, next) => {
       new AppError("The user belonging to this token does no longer exist")
     );
   }
-  //check if user changed password after the token was issued
-  // if (currentUser.changedPasswordAfter(decoded.iat)) {
-  //   return next(
-  //     new AppError("User recently changed password, Please log in again", 401)
-  //   );
-  // }
 
-  // req.user = currentUser;
+  req.user = currentUser;
   next();
 });
+
+exports.restrictTo = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return next(
+        new AppError("You do not have permission to perform this action", 403)
+      );
+    }
+    next();
+  };
+};
