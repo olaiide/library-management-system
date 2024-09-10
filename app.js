@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors");
 const morgan = require("morgan");
 const app = express();
 const AppError = require("./utils/appError");
@@ -10,7 +11,12 @@ const userRoute = require("./routes/userRoute");
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
+
+app.use(cors());
 app.use(express.json());
+app.use((req, res, next) => {
+  next();
+});
 app.use("/api/v1/books", bookRouter);
 app.use("/api/v1/users", userRoute);
 app.all("*", (req, res, next) => {

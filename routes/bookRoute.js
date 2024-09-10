@@ -1,5 +1,6 @@
 const express = require("express");
 const bookController = require("../controllers/bookController");
+const userController = require("../controllers/userController");
 const { body } = require("express-validator");
 const router = express.Router();
 
@@ -28,6 +29,8 @@ router.post(
       .isLength({ min: 15 })
       .withMessage("A book must not have an overview less than 15 characters"),
   ],
+  userController.protect,
+  userController.restrictTo("admin"),
   bookController.addBook
 );
 router.get("/", bookController.getAllBooks);
@@ -55,8 +58,17 @@ router.patch(
       .isLength({ min: 15 })
       .withMessage("A book must not have an overview less than 15 characters"),
   ],
+  userController.protect,
+  userController.restrictTo("admin"),
   bookController.updateBook
 );
-router.delete("/:id", bookController.deleteBook);
+router.delete(
+  "/:id",
+  userController.protect,
+  userController.restrictTo("admin"),
+  bookController.deleteBook
+);
+router.patch("/borrow/:id", userController.protect, bookController.borrowBook);
+router.patch("/return/:id", userController.protect, bookController.returnBook);
 
 module.exports = router;
