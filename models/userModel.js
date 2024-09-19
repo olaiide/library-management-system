@@ -27,7 +27,12 @@ const userSchema = new mongoose.Schema({
     minLength: 8,
     select: false,
   },
-  passwordChangedAt: Date,
+  otp: { type: String },
+  otpExpires: { type: Date },
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 userSchema.pre("save", async function (next) {
