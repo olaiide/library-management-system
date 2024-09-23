@@ -1,8 +1,8 @@
 const AppError = require("./../utils/appError");
-
+const { statusCodes } = require("../utils/constants");
 const handleCastErrorDB = (err) => {
   const message = `Invalid ${err.path}: ${err.value}.`;
-  return new AppError(message, 400);
+  return new AppError(message, statusCodes.BAD_REQUEST);
 };
 
 const handleDuplicateFieldsDB = (err) => {
@@ -11,12 +11,12 @@ const handleDuplicateFieldsDB = (err) => {
   )} value: ${
     err.keyValue.title || err.keyValue.email
   }. Please use another value!`;
-  return new AppError(message, 400);
+  return new AppError(message, statusCodes.BAD_REQUEST);
 };
 const handleValidationErrorDB = (err) => {
   const errors = Object.values(err.errors).map((el) => el.message);
   const message = `Invalid input data. ${errors.join(". ")}`;
-  return new AppError(message, 400);
+  return new AppError(message, statusCodes.BAD_REQUEST);
 };
 
 const sendErrorDev = (err, res) => {
@@ -42,7 +42,7 @@ const sendErrorProd = (err, res) => {
     console.error("ERROR 💥", err);
 
     // 2) Send generic message
-    res.status(500).json({
+    res.status(statusCodes.INTERNAL_SERVER_ERROR).json({
       status: "error",
       message: "Something went very wrong!",
     });
@@ -50,7 +50,7 @@ const sendErrorProd = (err, res) => {
 };
 
 module.exports = (err, req, res, next) => {
-  err.statusCode = err.statusCode || 500;
+  err.statusCode = err.statusCode || statusCodes.INTERNAL_SERVER_ERROR;
   err.status = err.status || "error";
 
   if (process.env.NODE_ENV === "development") {

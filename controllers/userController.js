@@ -6,7 +6,7 @@ const AppError = require("../utils/appError");
 const sendEmail = require("../utils/email");
 const { validationResult } = require("express-validator");
 const crypto = require("crypto");
-const { constants } = require("../utils/constants");
+const { constants, statusCodes } = require("../utils/constants");
 
 const signToken = (id) =>
   jwt.sign(
@@ -32,7 +32,7 @@ exports.signup = catchAsync(async (req, res, next) => {
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(statusCodes.BAD_REQUEST).json({ errors: errors.array() });
   }
 
   const { email } = req.body;
@@ -49,7 +49,7 @@ exports.signup = catchAsync(async (req, res, next) => {
       message: otpCodeMessage,
     });
 
-    return res.status(201).json({
+    return res.status(statusCodes.CREATED).json({
       status: constants.SUCCESS,
       message: "OTP sent to email. Please verify.",
       data: {
@@ -65,7 +65,7 @@ exports.signup = catchAsync(async (req, res, next) => {
     return next(
       new AppError(
         "The email adddress is already in use. Please provide a different one",
-        400
+        statusCodes.BAD_REQUEST
       )
     );
   }
@@ -85,7 +85,7 @@ exports.signup = catchAsync(async (req, res, next) => {
     message: otpCodeMessage,
   });
 
-  res.status(201).json({
+  res.status(statusCodes.CREATED).json({
     status: constants.SUCCESS,
     message: "OTP sent to email. Please verify.",
     data: {
@@ -101,27 +101,29 @@ exports.signup = catchAsync(async (req, res, next) => {
 exports.verifyOtp = catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(statusCodes.BAD_REQUEST).json({ errors: errors.array() });
   }
   const { otp, email } = req.body;
 
   const user = await User.findOne({ email });
   if (!user) {
-    return next(new AppError("User not found", 400));
+    return next(new AppError("User not found", statusCodes.BAD_REQUEST));
   }
 
   if (user.isVerified) {
-    return next(new AppError("User already verified", 400));
+    return next(new AppError("User already verified", statusCodes.BAD_REQUEST));
   }
 
   if (user.otpExpires < Date.now() || user.otp !== otp) {
-    return next(new AppError("Invalid or Expired OTP", 400));
+    return next(
+      new AppError("Invalid or Expired OTP", statusCodes.BAD_REQUEST)
+    );
   }
   user.isVerified = true;
   user.otp = undefined;
   user.otpExpires = undefined;
   await user.save();
-  res.status(200).json({
+  res.status(statusCodes.OK).json({
     status: constants.SUCCESS,
     message: "User verified successfully",
   });
@@ -129,18 +131,20 @@ exports.verifyOtp = catchAsync(async (req, res, next) => {
 exports.login = catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(statusCodes.BAD_REQUEST).json({ errors: errors.array() });
   }
   const { email, password } = req.body;
   // 2. check if email and password is correct
   const user = await User.findOne({ email }).select("+password");
 
   if (!user || !(await user.correctPassword(password, user.password))) {
-    return next(new AppError("Incorrect email or password", 401));
+    return next(
+      new AppError("Incorrect email or password", statusCodes.UNAUTHORIZED)
+    );
   }
   // 3. if eveyrthing is ok, send token to client
   const token = signToken(user._id);
-  res.status(200).json({
+  res.status(statusCodes.OK).json({
     status: constants.SUCCESS,
     token,
   });
@@ -148,7 +152,7 @@ exports.login = catchAsync(async (req, res, next) => {
 
 exports.getAllUsers = catchAsync(async (req, res, next) => {
   const users = await User.find();
-  res.status(200).json({
+  res.status(statusCodes.OK).json({
     status: constants.SUCCESS,
     results: users.length,
     data: {
@@ -167,7 +171,10 @@ exports.protect = catchAsync(async (req, res, next) => {
   }
   if (!token) {
     return next(
-      new AppError("You're not logged in, Please log in to have access", 401)
+      new AppError(
+        "You're not logged in, Please log in to have access",
+        statusCodes.UNAUTHORIZED
+      )
     );
   }
   const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
@@ -188,7 +195,10 @@ exports.restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return next(
-        new AppError("You do not have permission to perform this action", 403)
+        new AppError(
+          "You do not have permission to perform this action",
+          statusCodes.FORBIDDEN
+        )
       );
     }
     next();
