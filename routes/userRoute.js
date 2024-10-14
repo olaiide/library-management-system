@@ -54,5 +54,20 @@ router.post(
 
   userController.login
 );
+router.post(
+  "/verify-otp",
+  [
+    body("otp")
+      .notEmpty()
+      .withMessage("Please enter 6 digit OTP sent to your email")
+      .if(body("otp").notEmpty())
+      .isLength({ min: 6 })
+      .withMessage("Otp must be 6 digits")
+      .if(body("otp").notEmpty())
+      .isLength({ max: 6 })
+      .withMessage("Otp must be 6 digits"),
+  ],
+  userController.verifyOtp
+);
 router.get("/", userController.getAllUsers);
 module.exports = router;
