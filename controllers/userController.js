@@ -1,3 +1,4 @@
+const redis = require("redis");
 const { promisify } = require("util");
 const User = require("../models/userModel");
 const catchAsync = require("../utils/catchAsync");
@@ -7,6 +8,36 @@ const sendEmail = require("../utils/email");
 const { validationResult } = require("express-validator");
 const crypto = require("crypto");
 const { constants, statusCodes } = require("../utils/constants");
+
+const client = redis.createClient();
+
+const generateOTP = () => {
+  return crypto.randomInt(100000, 999999);
+};
+
+const otpCode = generateOTP();
+client.on("error", (err) => console.log("Redis Client Error", err));
+const startRedis = async () => {
+  try {
+    await client.connect(); // Establish connection
+  } catch (err) {
+    throw new Error(err);
+  }
+};
+
+startRedis();
+
+const setOtpInRedis = async (email) => {
+  try {
+    await client.setEx(
+      email,
+      constants.OTP_CODE_EXPIRY_TIME,
+      JSON.stringify(otpCode)
+    );
+  } catch (err) {
+    return err;
+  }
+};
 
 const signToken = (id) =>
   jwt.sign(
@@ -19,34 +50,27 @@ const signToken = (id) =>
     }
   );
 
-const generateOTP = () => {
-  return crypto.randomInt(100000, 999999);
-};
-
-const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
-
 exports.signup = catchAsync(async (req, res, next) => {
-  const otp = generateOTP();
-
-  const otpCodeMessage = `Your OTP code is ${otp}. It is valid for 10 minutes.`;
-
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(statusCodes.BAD_REQUEST).json({ errors: errors.array() });
   }
-
   const { email } = req.body;
+
   const existingUser = await User.findOne({ email });
+
   if (existingUser && !existingUser.isVerified) {
     (existingUser.name = req.body.name),
       (existingUser.password = req.body.password);
-    existingUser.otp = otp;
-    existingUser.otpExpires = otpExpires;
     await existingUser.save();
+    setOtpInRedis(email);
     await sendEmail({
-      email: existingUser.email,
       subject: "OTP Code",
-      message: otpCodeMessage,
+      template: "emailTemplate",
+      context: {
+        name: existingUser.name,
+        message: otpCode,
+      },
     });
 
     return res.status(statusCodes.CREATED).json({
@@ -61,6 +85,7 @@ exports.signup = catchAsync(async (req, res, next) => {
       },
     });
   }
+
   if (existingUser) {
     return next(
       new AppError(
@@ -75,14 +100,18 @@ exports.signup = catchAsync(async (req, res, next) => {
     email: req.body.email,
     role: req.body.role,
     password: req.body.password,
-    otp,
-    otpExpires,
   });
 
+  setOtpInRedis(email);
+
   await sendEmail({
-    email,
+    email: req.body.email,
     subject: "OTP Code",
-    message: otpCodeMessage,
+    template: "emailTemplate",
+    context: {
+      name: req.body.name,
+      message: otpCode,
+    },
   });
 
   res.status(statusCodes.CREATED).json({
@@ -114,14 +143,18 @@ exports.verifyOtp = catchAsync(async (req, res, next) => {
     return next(new AppError("User already verified", statusCodes.BAD_REQUEST));
   }
 
-  if (user.otpExpires < Date.now() || user.otp !== otp) {
-    return next(
-      new AppError("Invalid or Expired OTP", statusCodes.BAD_REQUEST)
-    );
+  try {
+    let otpInRedis = await client.get(email);
+    if (!otpInRedis || otpInRedis !== otp) {
+      return next(
+        new AppError("Invalid or Expired OTP", statusCodes.BAD_REQUEST)
+      );
+    }
+  } catch (error) {
+    return error;
   }
+
   user.isVerified = true;
-  user.otp = undefined;
-  user.otpExpires = undefined;
   await user.save();
   res.status(statusCodes.OK).json({
     status: constants.SUCCESS,

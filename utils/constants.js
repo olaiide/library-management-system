@@ -2,6 +2,7 @@ exports.constants = {
   SUCCESS: "success",
   VALID_PASSWORD:
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/,
+  OTP_CODE_EXPIRY_TIME: 600,
 };
 
 exports.statusCodes = {

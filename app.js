@@ -2,6 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 const app = express();
+const { engine } = require("express-handlebars");
+// const hbs = require("nodemailer-express-handlebars");
+// const path = require("path");
 const AppError = require("./utils/appError");
 const { statusCodes } = require("./utils/constants");
 const globalErrorHandler = require("./controllers/errorController");
@@ -18,6 +21,11 @@ app.use(express.json());
 app.use((req, res, next) => {
   next();
 });
+
+app.engine("handlebars", engine());
+app.set("view engine", "handlebars");
+app.set("views", "./views");
+
 app.use("/api/v1/books", bookRouter);
 app.use("/api/v1/users", userRoute);
 app.all("*", (req, res, next) => {

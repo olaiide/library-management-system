@@ -4,7 +4,7 @@ const bcrypt = require("bcrypt");
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, "Pls, tell us your name"],
+    required: [true, "Please, tell us your name"],
   },
   email: {
     type: String,
@@ -27,8 +27,6 @@ const userSchema = new mongoose.Schema({
     minLength: 8,
     select: false,
   },
-  otp: { type: String },
-  otpExpires: { type: Date },
   isVerified: {
     type: Boolean,
     default: false,
