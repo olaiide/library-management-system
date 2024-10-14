@@ -21,7 +21,7 @@ const startRedis = async () => {
   try {
     await client.connect(); // Establish connection
   } catch (err) {
-    throw new Error(err);
+    console.log(err);
   }
 };
 
@@ -35,7 +35,7 @@ const setOtpInRedis = async (email) => {
       JSON.stringify(otpCode)
     );
   } catch (err) {
-    return err;
+    console.log(err);
   }
 };
 
