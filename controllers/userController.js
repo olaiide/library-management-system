@@ -175,7 +175,16 @@ exports.login = catchAsync(async (req, res, next) => {
       new AppError("Incorrect email or password", statusCodes.UNAUTHORIZED)
     );
   }
-  // 3. if eveyrthing is ok, send token to client
+  // 3. check if user is active
+  if (!user.isActive) {
+    return next(
+      new AppError(
+        "Account is inactive. Please contact support.",
+        statusCodes.FORBIDDEN
+      )
+    );
+  }
+  // 4. if eveyrthing is ok, send token to client
   const token = signToken(user._id);
   res.status(statusCodes.OK).json({
     status: constants.SUCCESS,
@@ -194,6 +203,50 @@ exports.getAllUsers = catchAsync(async (req, res, next) => {
   });
 });
 
+exports.deactivateUser = catchAsync(async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(statusCodes.BAD_REQUEST).json({ errors: errors.array() });
+  }
+  const email = req.body.email;
+  const user = await User.findOne({ email });
+  if (!user) {
+    return next(new AppError("User not found", statusCodes.BAD_REQUEST));
+  }
+  if (!user.isActive) {
+    return next(
+      new AppError("User already deactivated", statusCodes.BAD_REQUEST)
+    );
+  }
+  user.isActive = false;
+  await user.save();
+  res.status(statusCodes.OK).json({
+    status: constants.SUCCESS,
+    message: "User deactivated successfully",
+  });
+});
+
+exports.activateUser = catchAsync(async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(statusCodes.BAD_REQUEST).json({ errors: errors.array() });
+  }
+  const email = req.body.email;
+  const user = await User.findOne({ email });
+  if (!user) {
+    return next(new AppError("User not found", statusCodes.BAD_REQUEST));
+  }
+  if (user.isActive) {
+    return next(new AppError("User is active", statusCodes.BAD_REQUEST));
+  }
+  user.isActive = true;
+  await user.save();
+  res.status(statusCodes.OK).json({
+    status: constants.SUCCESS,
+    message: "User activated successfully",
+  });
+});
+
 exports.protect = catchAsync(async (req, res, next) => {
   let token;
   if (
@@ -202,6 +255,7 @@ exports.protect = catchAsync(async (req, res, next) => {
   ) {
     token = req.headers.authorization.split(" ")[1];
   }
+
   if (!token) {
     return next(
       new AppError(
@@ -237,3 +291,12 @@ exports.restrictTo = (...roles) => {
     next();
   };
 };
+
+exports.checkUserActive = catchAsync(async (req, res, next) => {
+  if (!req.user.isActive) {
+    return next(
+      new AppError("User is inactive. Access denied.", statusCodes.FORBIDDEN)
+    );
+  }
+  next();
+});

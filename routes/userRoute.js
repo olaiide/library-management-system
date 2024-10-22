@@ -69,5 +69,33 @@ router.post(
   ],
   userController.verifyOtp
 );
+router.patch(
+  "/deactivate",
+  [
+    body("email").notEmpty().withMessage("Please provide email"),
+    body("email")
+      .if(body("email").notEmpty())
+      .isEmail()
+      .withMessage("Please provide a valid email address"),
+  ],
+  userController.protect,
+  userController.checkUserActive,
+  userController.restrictTo("admin"),
+  userController.deactivateUser
+);
+router.patch(
+  "/activate",
+  [
+    body("email").notEmpty().withMessage("Please provide email"),
+    body("email")
+      .if(body("email").notEmpty())
+      .isEmail()
+      .withMessage("Please provide a valid email address"),
+  ],
+  userController.protect,
+  userController.checkUserActive,
+  userController.restrictTo("admin"),
+  userController.activateUser
+);
 router.get("/", userController.getAllUsers);
 module.exports = router;
