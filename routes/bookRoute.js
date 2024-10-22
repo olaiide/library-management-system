@@ -30,6 +30,7 @@ router.post(
       .withMessage("A book must not have an overview less than 15 characters"),
   ],
   userController.protect,
+  userController.checkUserActive,
   userController.restrictTo("admin"),
   bookController.addBook
 );
@@ -59,16 +60,28 @@ router.patch(
       .withMessage("A book must not have an overview less than 15 characters"),
   ],
   userController.protect,
+  userController.checkUserActive,
   userController.restrictTo("admin"),
   bookController.updateBook
 );
 router.delete(
   "/:id",
   userController.protect,
+  userController.checkUserActive,
   userController.restrictTo("admin"),
   bookController.deleteBook
 );
-router.patch("/borrow/:id", userController.protect, bookController.borrowBook);
-router.patch("/return/:id", userController.protect, bookController.returnBook);
+router.patch(
+  "/borrow/:id",
+  userController.protect,
+  userController.checkUserActive,
+  bookController.borrowBook
+);
+router.patch(
+  "/return/:id",
+  userController.protect,
+  userController.checkUserActive,
+  bookController.returnBook
+);
 
 module.exports = router;
