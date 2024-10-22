@@ -2,15 +2,15 @@ const Book = require("../models/bookModel");
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
 const { validationResult } = require("express-validator");
-const { constants } = require("../utils/constants");
+const { constants, statusCodes } = require("../utils/constants");
 
 exports.addBook = catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(statusCodes.BAD_REQUEST).json({ errors: errors.array() });
   }
   const newBook = await Book.create(req.body);
-  res.status(201).json({
+  res.status(statusCodes.CREATED).json({
     status: constants.SUCCESS,
     data: {
       book: newBook,
@@ -40,7 +40,7 @@ exports.getAllBooks = catchAsync(async (req, res, next) => {
   const books = await query;
   const totalItems = await Book.countDocuments(JSON.parse(queryStr));
 
-  res.status(200).json({
+  res.status(statusCodes.OK).json({
     status: "Success",
     results: books.length,
     data: {
@@ -55,9 +55,11 @@ exports.getAllBooks = catchAsync(async (req, res, next) => {
 exports.getBook = catchAsync(async (req, res, next) => {
   const book = await Book.findById(req.params.id);
   if (!book) {
-    return next(new AppError("No book found with that ID", 404));
+    return next(
+      new AppError("No book found with that ID", statusCodes.NOT_FOUND)
+    );
   }
-  res.status(200).json({
+  res.status(statusCodes.OK).json({
     status: "Success",
     data: {
       book,
@@ -69,16 +71,18 @@ exports.updateBook = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const findBook = await Book.findById(id);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(statusCodes.BAD_REQUEST).json({ errors: errors.array() });
   }
   if (!findBook) {
-    return next(new AppError("No book found with that ID", 404));
+    return next(
+      new AppError("No book found with that ID", statusCodes.NOT_FOUND)
+    );
   }
   const book = await Book.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
   });
-  res.status(200).json({
+  res.status(statusCodes.OK).json({
     status: constants.SUCCESS,
     data: {
       book,
@@ -88,9 +92,11 @@ exports.updateBook = catchAsync(async (req, res, next) => {
 exports.deleteBook = catchAsync(async (req, res, next) => {
   const book = await Book.findByIdAndDelete(req.params.id);
   if (!book) {
-    return next(new AppError("No book found with that ID", 404));
+    return next(
+      new AppError("No book found with that ID", statusCodes.NOT_FOUND)
+    );
   }
-  res.status(204).json({
+  res.status(statusCodes.NO_CONTENT).json({
     status: "success",
     data: null,
   });
@@ -99,10 +105,12 @@ exports.borrowBook = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const book = await Book.findById(id);
   if (!book) {
-    return next(new AppError("No book found with that ID", 404));
+    return next(
+      new AppError("No book found with that ID", statusCodes.NOT_FOUND)
+    );
   }
   if (!book.available) {
-    return next(new AppError("Book already borrowed", 400));
+    return next(new AppError("Book already borrowed", statusCodes.BAD_REQUEST));
   }
   book.available = false;
 
@@ -111,7 +119,7 @@ exports.borrowBook = catchAsync(async (req, res, next) => {
   const responseBook = book.toObject();
   delete responseBook.available;
 
-  res.status(200).json({
+  res.status(statusCodes.OK).json({
     status: constants.SUCCESS,
     message: "Book borrowed successfully",
     data: {
@@ -123,15 +131,19 @@ exports.returnBook = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const book = await Book.findById(id);
   if (!book) {
-    return next(new AppError("No book found with that ID", 404));
+    return next(
+      new AppError("No book found with that ID", statusCodes.NOT_FOUND)
+    );
   }
   if (book.available) {
-    return next(new AppError("Book has not been borrowed", 400));
+    return next(
+      new AppError("Book has not been borrowed", statusCodes.BAD_REQUEST)
+    );
   }
   book.available = true;
   await book.save();
 
-  res.status(200).json({
+  res.status(statusCodes.OK).json({
     status: constants.SUCCESS,
     message: "Book returned successfully",
     data: {
