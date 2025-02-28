@@ -38,6 +38,14 @@ const bookSchema = new mongoose.Schema({
     type: Date,
     default: Date.now(),
   },
+  borrowedBy: {
+    type: mongoose.Schema.ObjectId,
+    ref: "User",
+  },
+  expectedReturnDate: {
+    type: Date,
+    default: null,
+  },
 });
 
 const Book = mongoose.model("Book", bookSchema);

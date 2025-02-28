@@ -8,24 +8,13 @@ const sendEmail = require("../utils/email");
 const { validationResult } = require("express-validator");
 const crypto = require("crypto");
 const { constants, statusCodes } = require("../utils/constants");
-
-const client = redis.createClient();
+const { client } = require("../config/redisClient");
 
 const generateOTP = () => {
   return crypto.randomInt(100000, 999999);
 };
 
 const otpCode = generateOTP();
-client.on("error", (err) => console.log("Redis Client Error", err));
-const startRedis = async () => {
-  try {
-    await client.connect(); // Establish connection
-  } catch (err) {
-    throw new Error(err);
-  }
-};
-
-startRedis();
 
 const setOtpInRedis = async (email) => {
   try {

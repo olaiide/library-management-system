@@ -102,8 +102,23 @@ exports.deleteBook = catchAsync(async (req, res, next) => {
   });
 });
 exports.borrowBook = catchAsync(async (req, res, next) => {
-  const id = req.params.id;
+  const { id } = req.params;
+  const { returnDate } = req.query;
+  const userId = req.user.id;
   const book = await Book.findById(id);
+  if (!returnDate || isNaN(new Date(returnDate))) {
+    return next(
+      new AppError(
+        "Please provide a valid return date",
+        statusCodes.BAD_REQUEST
+      )
+    );
+  }
+  if (new Date(returnDate) <= new Date()) {
+    return next(
+      new AppError("Return date must be in the future", statusCodes.BAD_REQUEST)
+    );
+  }
   if (!book) {
     return next(
       new AppError("No book found with that ID", statusCodes.NOT_FOUND)
@@ -113,6 +128,13 @@ exports.borrowBook = catchAsync(async (req, res, next) => {
     return next(new AppError("Book already borrowed", statusCodes.BAD_REQUEST));
   }
   book.available = false;
+  book.borrowedBy = userId;
+  book.returnDate = new Date(returnDate);
+  book.set({
+    expectedReturnDate: new Date(returnDate),
+    available: false,
+    borrowedBy: userId,
+  });
 
   await book.save();
 
@@ -148,6 +170,7 @@ exports.returnBook = catchAsync(async (req, res, next) => {
     message: "Book returned successfully",
     data: {
       book,
+      expectedReturnDate: book.returnDate,
     },
   });
 });
