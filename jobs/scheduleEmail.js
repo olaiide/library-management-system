@@ -1,16 +1,21 @@
 const emailQueue = require("./emailQueue");
 
 async function scheduleEmailJob() {
-  const jobId = "daily-email-reminder";
-
+  const jobId = "email-every-day";
+  const existingJob = await emailQueue.getJobSchedulers();
+  if (existingJob.some((job) => job.id === jobId)) {
+    await emailQueue.removeJobScheduler(existingJob[0].key);
+  }
   await emailQueue.add(
-    "sendEmailReminder",
+    "sendEmail",
     {},
     {
       jobId,
       repeat: {
-        pattern: "0 9 * * *", // Send email every day at 9:00 AM
+        pattern: "0 9 * * *",
       },
+      removeOnComplete: true,
+      removeOnFail: true,
     }
   );
 }

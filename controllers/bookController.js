@@ -1,8 +1,10 @@
+const mongoose = require("mongoose");
 const Book = require("../models/bookModel");
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
 const { validationResult } = require("express-validator");
 const { constants, statusCodes } = require("../utils/constants");
+const BorrowingHistory = require("../models/borrowingHistoryModel");
 
 exports.addBook = catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
@@ -53,7 +55,12 @@ exports.getAllBooks = catchAsync(async (req, res, next) => {
 });
 
 exports.getBook = catchAsync(async (req, res, next) => {
-  const book = await Book.findById(req.params.id);
+  const { id: bookId } = req.params;
+  if (!mongoose.isValidObjectId(bookId)) {
+    return res.status(400).json({ message: "Invalid book ID" });
+  }
+  const book = await Book.findById(bookId);
+
   if (!book) {
     return next(
       new AppError("No book found with that ID", statusCodes.NOT_FOUND)
@@ -68,8 +75,11 @@ exports.getBook = catchAsync(async (req, res, next) => {
 });
 exports.updateBook = catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
-  const id = req.params.id;
-  const findBook = await Book.findById(id);
+  const bookId = req.params.id;
+  if (!mongoose.isValidObjectId(bookId)) {
+    return res.status(400).json({ message: "Invalid book ID" });
+  }
+  const findBook = await Book.findById(bookId);
   if (!errors.isEmpty()) {
     return res.status(statusCodes.BAD_REQUEST).json({ errors: errors.array() });
   }
@@ -78,7 +88,7 @@ exports.updateBook = catchAsync(async (req, res, next) => {
       new AppError("No book found with that ID", statusCodes.NOT_FOUND)
     );
   }
-  const book = await Book.findByIdAndUpdate(req.params.id, req.body, {
+  const book = await Book.findByIdAndUpdate(bookId, req.body, {
     new: true,
     runValidators: true,
   });
@@ -90,7 +100,11 @@ exports.updateBook = catchAsync(async (req, res, next) => {
   });
 });
 exports.deleteBook = catchAsync(async (req, res, next) => {
-  const book = await Book.findByIdAndDelete(req.params.id);
+  const { id: bookId } = req.params;
+  if (!mongoose.isValidObjectId(bookId)) {
+    return res.status(400).json({ message: "Invalid book ID" });
+  }
+  const book = await Book.findByIdAndDelete(bookId);
   if (!book) {
     return next(
       new AppError("No book found with that ID", statusCodes.NOT_FOUND)
@@ -102,10 +116,14 @@ exports.deleteBook = catchAsync(async (req, res, next) => {
   });
 });
 exports.borrowBook = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
+  const { id: bookId } = req.params;
   const { returnDate } = req.query;
   const userId = req.user.id;
-  const book = await Book.findById(id);
+
+  if (!mongoose.isValidObjectId(bookId)) {
+    return res.status(400).json({ message: "Invalid book ID" });
+  }
+  const book = await Book.findById(bookId);
   if (!returnDate || isNaN(new Date(returnDate))) {
     return next(
       new AppError(
@@ -128,16 +146,12 @@ exports.borrowBook = catchAsync(async (req, res, next) => {
     return next(new AppError("Book already borrowed", statusCodes.BAD_REQUEST));
   }
   book.available = false;
-  book.borrowedBy = userId;
-  book.returnDate = new Date(returnDate);
-  book.set({
-    expectedReturnDate: new Date(returnDate),
-    available: false,
+  await BorrowingHistory.create({
+    book: bookId,
     borrowedBy: userId,
+    expectedReturnDate: new Date(returnDate),
   });
-
   await book.save();
-
   const responseBook = book.toObject();
   delete responseBook.available;
 
@@ -150,8 +164,12 @@ exports.borrowBook = catchAsync(async (req, res, next) => {
   });
 });
 exports.returnBook = catchAsync(async (req, res, next) => {
-  const id = req.params.id;
-  const book = await Book.findById(id);
+  const bookId = req.params.id;
+  const userId = req.user.id;
+  if (!mongoose.isValidObjectId(bookId)) {
+    return res.status(400).json({ message: "Invalid book ID" });
+  }
+  const book = await Book.findById(bookId);
   if (!book) {
     return next(
       new AppError("No book found with that ID", statusCodes.NOT_FOUND)
@@ -162,15 +180,30 @@ exports.returnBook = catchAsync(async (req, res, next) => {
       new AppError("Book has not been borrowed", statusCodes.BAD_REQUEST)
     );
   }
+  const borrowRecord = await BorrowingHistory.findOne({
+    book: bookId,
+    borrowedBy: userId,
+    returnedAt: null,
+  });
+
+  if (!borrowRecord) {
+    return next(
+      new AppError("No active borrow record found", statusCodes.BAD_REQUEST)
+    );
+  }
+
   book.available = true;
   await book.save();
+  borrowRecord.returnedAt = new Date();
+  await borrowRecord.save();
 
   res.status(statusCodes.OK).json({
     status: constants.SUCCESS,
     message: "Book returned successfully",
     data: {
       book,
-      expectedReturnDate: book.returnDate,
+      expectedReturnDate: borrowRecord.expectedReturnDate,
+      returnedAt: borrowRecord.returnedAt,
     },
   });
 });
