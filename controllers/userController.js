@@ -15,6 +15,16 @@ const generateOTP = () => {
 };
 
 const otpCode = generateOTP();
+client.on("error", (err) => console.log("Redis Client Error", err));
+const startRedis = async () => {
+  try {
+    await client.connect(); // Establish connection
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+startRedis();
 
 const setOtpInRedis = async (email) => {
   try {
@@ -24,7 +34,7 @@ const setOtpInRedis = async (email) => {
       JSON.stringify(otpCode)
     );
   } catch (err) {
-    return err;
+    console.log(err);
   }
 };
 
