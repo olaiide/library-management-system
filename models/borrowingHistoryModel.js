@@ -17,6 +17,11 @@ const borrowingHistorySchema = new mongoose.Schema({
   returnedAt: {
     type: Date,
   },
+  status: {
+    type: String,
+    enum: ["Pending", "Returned", "Lost"],
+    default: "Pending",
+  },
 });
 const BorrowingHistory = mongoose.model(
   "BorrowingHistory",

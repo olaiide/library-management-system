@@ -193,9 +193,10 @@ exports.returnBook = catchAsync(async (req, res, next) => {
   }
 
   book.available = true;
-  await book.save();
   borrowRecord.returnedAt = new Date();
-  await borrowRecord.save();
+  borrowRecord.status = "Returned";
+
+  await Promise.all([book.save(), borrowRecord.save()]);
 
   res.status(statusCodes.OK).json({
     status: constants.SUCCESS,
@@ -204,6 +205,60 @@ exports.returnBook = catchAsync(async (req, res, next) => {
       book,
       expectedReturnDate: borrowRecord.expectedReturnDate,
       returnedAt: borrowRecord.returnedAt,
+    },
+  });
+});
+exports.reportLostBook = catchAsync(async (req, res, next) => {
+  const bookId = req.params.id;
+  const userId = req.user.id;
+
+  if (!mongoose.isValidObjectId(bookId)) {
+    return res.status(400).json({ message: "Invalid book ID" });
+  }
+
+  const book = await Book.findById(bookId);
+  if (!book) {
+    return next(
+      new AppError("No book found with that ID", statusCodes.NOT_FOUND)
+    );
+  }
+
+  if (book.available) {
+    return next(
+      new AppError(
+        "This book is not currently borrowed",
+        statusCodes.BAD_REQUEST
+      )
+    );
+  }
+  const borrowRecord = await BorrowingHistory.findOne({
+    book: bookId,
+    borrowedBy: userId,
+    returnedAt: null,
+  });
+
+  if (!borrowRecord) {
+    return next(
+      new AppError("No active borrow record found", statusCodes.BAD_REQUEST)
+    );
+  }
+
+  if (borrowRecord.status === "Lost") {
+    return next(
+      new AppError(
+        "This book has already been marked as lost",
+        statusCodes.BAD_REQUEST
+      )
+    );
+  }
+  borrowRecord.status = "Lost";
+  book.available = false;
+  await Promise.all([book.save(), borrowRecord.save()]);
+  res.status(statusCodes.OK).json({
+    status: constants.SUCCESS,
+    message: "Book has been reported as lost",
+    data: {
+      book,
     },
   });
 });

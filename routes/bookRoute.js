@@ -78,6 +78,12 @@ router.patch(
   bookController.borrowBook
 );
 router.patch(
+  "/report-lost/:id",
+  userController.protect,
+  userController.checkUserActive,
+  bookController.reportLostBook
+);
+router.patch(
   "/return/:id",
   userController.protect,
   userController.checkUserActive,
