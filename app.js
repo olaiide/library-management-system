@@ -3,12 +3,27 @@ const cors = require("cors");
 const morgan = require("morgan");
 const app = express();
 const { engine } = require("express-handlebars");
+const { connectRedis } = require("./config/redisClient");
 const AppError = require("./utils/appError");
 const { statusCodes } = require("./utils/constants");
 const globalErrorHandler = require("./controllers/errorController");
 const bookRouter = require("./routes/bookRoute");
 const userRoute = require("./routes/userRoute");
+const scheduleEmailJob = require("./jobs/scheduleEmail");
+require("./jobs/emailWorker");
 
+connectRedis()
+  .then(() => {
+    scheduleEmailJob();
+  })
+  .catch((err) => {
+    throw new Error(err);
+  });
+
+// MIDDLEWARE
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+}
 // MIDDLEWARE
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
@@ -19,7 +34,6 @@ app.use(express.json());
 app.use((req, res, next) => {
   next();
 });
-
 app.engine("handlebars", engine());
 app.set("view engine", "handlebars");
 app.set("views", "./views");
